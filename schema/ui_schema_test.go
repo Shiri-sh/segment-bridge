@@ -13,7 +13,10 @@ import (
 
 type uiSchema struct {
 	Definitions struct {
-		CommonFields commonFieldsSchema `json:"CommonFields"`
+		CommonFields     commonFieldsSchema `json:"CommonFields"`
+		UserJourneyEvent struct {
+			AllOf []eventSchema `json:"allOf"`
+		} `json:"user_journey_event"`
 	} `json:"$defs"`
 }
 
@@ -25,6 +28,13 @@ type commonFieldsSchema struct {
 type fieldSchema struct {
 	Type    string `json:"type"`
 	Pattern string `json:"pattern"`
+	Default *int   `json:"default"`
+}
+
+type eventSchema struct {
+	Properties   map[string]fieldSchema `json:"properties"`
+	Required     []string               `json:"required"`
+	Dependencies map[string][]string    `json:"dependencies"`
 }
 
 func TestUISchemaClusterVersion(t *testing.T) {
@@ -70,6 +80,23 @@ func TestUISchemaClusterVersion(t *testing.T) {
 			require.EqualError(t, err, tt.wantErr)
 		})
 	}
+}
+
+func TestUISchemaJourneySplitFieldsAreOptionalButPaired(t *testing.T) {
+	schema := loadUISchema(t)
+	journey := schema.Definitions.UserJourneyEvent.AllOf
+	require.Len(t, journey, 2)
+	payload := journey[1]
+
+	assert.Contains(t, payload.Properties, "journeyId")
+	assert.Contains(t, payload.Properties, "journeyPartIndex")
+	assert.NotContains(t, payload.Required, "journeyId")
+	assert.NotContains(t, payload.Required, "journeyPartIndex")
+	assert.Equal(t, map[string][]string{
+		"journeyId":        {"journeyPartIndex"},
+		"journeyPartIndex": {"journeyId"},
+	}, payload.Dependencies)
+	assert.Nil(t, payload.Properties["journeyPartIndex"].Default)
 }
 
 func loadUISchema(t *testing.T) uiSchema {
