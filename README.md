@@ -1,4 +1,6 @@
 # segment-bridge
+<!-- markdownlint-disable-next-line MD013 -->
+![GitHub commit check runs](https://img.shields.io/github/check-runs/konflux-ci/segment-bridge/main?nameFilter=Konflux%20kflux-prd-rh02%20%2F%20segment-bridge-on-push&label=Build) ![GitHub commit check runs](https://img.shields.io/github/check-runs/konflux-ci/segment-bridge/main?nameFilter=Red%20Hat%20Konflux%20%2F%20segment-bridge-enterprise-contract%20%2F%20segment-bridge&label=EC)
 
 Bridge anonymous [Tekton](https://tekton.dev/) PipelineRun telemetry from Konflux
 clusters into [Segment][1] (and downstream analytics such as Amplitude).
