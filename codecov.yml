@@ -15,9 +15,9 @@ coverage:
         informational: true
     patch:
       default:
-        target: 80%
-        threshold: 2%
-        informational: true
+        target: 85%
+        threshold: 0%
+        informational: false
 
 ignore:
   - "Makefile"
