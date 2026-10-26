@@ -150,15 +150,13 @@ func GetNetrcPath() (string, error) {
 	return netrcPath, nil
 }
 
-// Making sure to stop and remove the pod we deployed
+// Making sure to stop and remove the pod we deployed.
+// Use rm -f only: stop alone fails with exit 125 when the pod is already gone
+// (parallel packages or a prior cleanup), which made CI red despite passing tests.
 func cleanup(t *testing.T, podName string) {
-	cmd := exec.Command("podman", "pod", "stop", podName)
+	cmd := exec.Command("podman", "pod", "rm", "-f", podName)
 	if err := cmd.Run(); err != nil {
-		t.Errorf("Error stopping the pod: %s", err)
-	}
-	removePodCmd := exec.Command("podman", "pod", "rm", "-f", podName)
-	if err := removePodCmd.Run(); err != nil {
-		t.Fatalf("Error removing the pod: %s", err)
+		t.Errorf("Error removing the pod %q: %v", podName, err)
 	}
 }
 
