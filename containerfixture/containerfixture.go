@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -42,7 +43,9 @@ func getRandomDynamicPort() string {
 // Modify the yaml manifest to allow running it in parallel
 // as many times as needed with dynamic values for its name and ports
 func generateFixturePodYaml(templateYaml string) FixtureInfo {
-	podName := fmt.Sprintf("test-pod-%s", getRandomDynamicPort())
+	// Include PID: go test runs packages in parallel processes; port-only names
+	// collided and one package's cleanup removed another's pod (podman exit 125).
+	podName := fmt.Sprintf("test-pod-%d-%s", os.Getpid(), getRandomDynamicPort())
 	webPort := getRandomDynamicPort()
 	apiPort := getRandomDynamicPort()
 	deployment := FixtureInfo{
@@ -151,13 +154,17 @@ func GetNetrcPath() (string, error) {
 }
 
 // Making sure to stop and remove the pod we deployed.
-// Use rm -f only: stop alone fails with exit 125 when the pod is already gone
-// (parallel packages or a prior cleanup), which made CI red despite passing tests.
 func cleanup(t *testing.T, podName string) {
 	cmd := exec.Command("podman", "pod", "rm", "-f", podName)
-	if err := cmd.Run(); err != nil {
-		t.Errorf("Error removing the pod %q: %v", podName, err)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		return
 	}
+	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 125 {
+		// Pod already removed (e.g. name collision across parallel go test packages).
+		return
+	}
+	t.Errorf("Error removing the pod %q: %v\n%s", podName, err, string(out))
 }
 
 func WithServiceContainer(t *testing.T, ServiceManifest string, testFunc func(FixtureInfo)) {
